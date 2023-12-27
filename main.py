@@ -1,17 +1,17 @@
-import serial, argparse, binascii, struct, sys, time
-import os
+import serial, argparse, binascii, struct, sys, time, os
+import serial.tools.list_ports
 import vgamepad as vg
 from threading import Thread
 
-parser = argparse.ArgumentParser(description='DJI Mini 2 RC (also known as RC-N1, RCS231, WM161b-RC-N1, RCN1) <-> Linux joystick interface (uinput)')
+#parser = argparse.ArgumentParser(description='DJI Mini 2 RC (also known as RC-N1, RCS231, WM161b-RC-N1, RCN1) <-> vgamepad')
 
-parser.add_argument('-p', '--port', help='RC Serial Port', required=True)
+#parser.add_argument('-p', '--port', help='RC Serial Port', required=False)
 
-args = parser.parse_args()
+#args = parser.parse_args()
+
+ERROR_PORT_MESSAGE = "ERROR: Something went wrong, maybe this port does not belong to the  DJI Mini 2 Remote"
 
 maxValue = 32768
-
-time.sleep(1)
 
 gamepad = vg.VDS4Gamepad()
 
@@ -117,9 +117,28 @@ def send_duml(s, source, target, cmd_type, cmd_set, cmd_id, payload = None):
 
     sequence_number += 1
 
+def get_serial_ports():
+    ports = serial.tools.list_ports.comports()
+    return [port.device for port in ports]
+
+input("Press ENTER when the DJI Mini 2 Remove is connected via USB\n")
+
+serial_ports = get_serial_ports()
+
+if serial_ports:
+    print("Available Serial Ports:")
+    for port in serial_ports:
+        print(port)
+
+    selected_port = input("Choose a port by typing the name (Example: COM4): ")
+else:
+    print("ERROR: No serial ports found. The DJI Mini 2 Remote is NOT connected")
+    exit(0)
+
+
 # Open serial.
 try:
-    s = serial.Serial(port=args.port, baudrate=115200)
+    s = serial.Serial(port=selected_port, baudrate=115200, timeout=3)
     print('Opened serial device:', s.name)
 except serial.SerialException as e:
     print('Could not open serial device:', e)    
@@ -142,26 +161,30 @@ try:
 
     while True:
         send_duml(s, 0x0a, 0x06, 0x40, 0x06, 0x01, bytearray.fromhex(''))
-
         # read duml
         buffer = bytearray.fromhex('')
         while True:
             b = s.read(1)
-            if b == bytearray.fromhex('55'):
-                buffer.extend(b)
-                ph = s.read(2)
-                buffer.extend(ph)
-                ph = struct.unpack('<H', ph)[0]
-                pl = 0b0000001111111111 & ph
-                pv = 0b1111110000000000 & ph
-                pv = pv >> 10
-                pc = s.read(1)
-                buffer.extend(pc)
-                pd = s.read(pl - 4)
-                buffer.extend(pd)
-                break
+            if b:
+                if b == bytearray.fromhex('55'):
+                    buffer.extend(b)
+                    ph = s.read(2)
+                    buffer.extend(ph)
+                    ph = struct.unpack('<H', ph)[0]
+                    pl = 0b0000001111111111 & ph
+                    pv = 0b1111110000000000 & ph
+                    pv = pv >> 10
+                    pc = s.read(1)
+                    buffer.extend(pc)
+                    pd = s.read(pl - 4)
+                    buffer.extend(pd)
+                    break
+                else:
+                    print(ERROR_PORT_MESSAGE)
+                    exit(0)
             else:
-                break
+                print(ERROR_PORT_MESSAGE)
+                exit(0)
         data = buffer
 
         # Reverse-engineered. Controller input seems to always be len 38.
@@ -175,36 +198,22 @@ try:
 
             camera = parseInput(data[25:27], 'cam')
 
-
             print("Throttle: " + str(st["lv"]))
             print("Yaw: " + str(st["lh"]))
             print("Roll: " + str(st["rh"]))
             print("Pitch: " + str(st["rv"]))
-
             print("Cam: " + str(camera))
 
             gamepad.left_joystick_float(x_value_float=st["lh"], y_value_float=st["lv"])
             gamepad.right_joystick_float(x_value_float=st["rh"], y_value_float=st["rv"])
 
             gamepad.update()
-
-
-#            print(st)
-            #with uinput.Device(events) as device:
-#            time.sleep(0.1)
-        #else:
-            # print(len(data))
-
-            # Log to console.
-            #print('L: H{0:06d},V{1:06d}; R: H{2:06d},V{3:06d}, CAM: {4:06d}\n'.format(left_horizontal, left_vertical, right_horizontal, right_vertical, camera), end='')
 except serial.SerialException as e:
-    # Stylistic: Newline to stop data update and spacing.
     print('\n\nCould not read/write:', e)
-    sys.exit(0)
+    exit(0)
 except KeyboardInterrupt:
-    # Stylistic: Newline to stop data update and spacing.
     print('\n\nDetected keyboard interrupt.')
-    sys.exit(0)
+    exit(0)
 
     pass
 
