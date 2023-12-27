@@ -1,13 +1,6 @@
 import serial, argparse, binascii, struct, sys, time, os
 import serial.tools.list_ports
 import vgamepad as vg
-from threading import Thread
-
-#parser = argparse.ArgumentParser(description='DJI Mini 2 RC (also known as RC-N1, RCS231, WM161b-RC-N1, RCN1) <-> vgamepad')
-
-#parser.add_argument('-p', '--port', help='RC Serial Port', required=False)
-
-#args = parser.parse_args()
 
 ERROR_PORT_MESSAGE = "ERROR: Something went wrong, maybe this port does not belong to the  DJI Mini 2 Remote"
 
