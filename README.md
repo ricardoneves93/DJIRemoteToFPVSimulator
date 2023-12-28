@@ -67,15 +67,16 @@ python main.py
 
 This code was inspired in this repo https://github.com/usatenko/DjiMini2RCasJoystick, which unfortunately only works in linux.
 
-If you like my work:
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/nevesfpv)
-
 FPV simulators where I've tested:
 * FPV Skydive
 * Uncrashed
 * FPV Freerider
 * DRL (The Drone Racing League Simulator)
 * TRYP
+
+## Support me
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/nevesfpv)
 
 
 
